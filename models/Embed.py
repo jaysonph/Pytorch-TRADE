@@ -22,6 +22,7 @@ class CombinedEmbedding(nn.Module):
 
 		# Non-trainable tensor
 		self.char_emb_tensor = self.create_char_emb_tensor()
+		self.char_emb_tensor.requires_grad = False
 
 	def create_char_emb_tensor(self):
 		# combine char embedding into the list and used later for extended embedding for indexing OOV words.
@@ -43,19 +44,20 @@ class CombinedEmbedding(nn.Module):
 		- extended_word2id (dict): included the OOV words seen in sample
 		- extended_word_id_seq (torch.tensor, int64): [bs, max_seq] OOV words are assigned an temporary id instead of '[UNK]' id
 		'''
-
+		device = self.word_emb.weight.device
+		word_id_seq = word_id_seq.to(device)
 		w_embedded_seq = self.word_emb(word_id_seq)  # [bs, max_seq, 300]
 
 		# Get char embeddings, create extended embeddings & word2id & word_id_seq for OOV words
 		c_embedded_seq = torch.zeros(w_embedded_seq.shape[0], w_embedded_seq.shape[1], self.char_emb.d_emb)
 		c_embedded_seq[:, :, :] = torch.tensor(self.char_emb.emb('[PAD]'))
-		extended_embeddings = torch.cat([self.word_emb.weight, self.char_emb_tensor], dim=-1)  # [V, 400]
+		extended_embeddings = torch.cat([self.word_emb.weight, self.char_emb_tensor.to(device)], dim=-1)  # [V, 400]
 		oov_embeddings = []
 		extended_word2id = self.vocab.word2id.copy()
 		extended_word_id_seq = word_id_seq.clone().detach()
 		for bi, context in enumerate(context_plain):
 			for wi, word in enumerate(self.vocab.tokenize(context)):
-				char_vec = torch.tensor(self.char_emb.emb(word)).unsqueeze(0)  # [1, 100]
+				char_vec = torch.tensor(self.char_emb.emb(word)).unsqueeze(0).to(device)  # [1, 100]
 				c_embedded_seq[bi, wi, :] = char_vec
 
 				if extended_word2id.get(word) == None:  # create extended vocab for OOV words
@@ -64,9 +66,11 @@ class CombinedEmbedding(nn.Module):
 					extended_word_id_seq[bi, wi] = len(extended_word2id)
 					extended_word2id[word] = len(extended_word2id)
 
-		oov_embeddings = torch.cat(oov_embeddings, dim=0)  # [OOV, 400]
-		extended_embeddings = torch.cat([extended_embeddings, oov_embeddings], dim=0)  # [V+OOV, 400]
+		if oov_embeddings:
+			oov_embeddings = torch.cat(oov_embeddings, dim=0)  # [OOV, 400]
+			extended_embeddings = torch.cat([extended_embeddings, oov_embeddings], dim=0)  # [V+OOV, 400]
 
+		c_embedded_seq = c_embedded_seq.to(device)
 		embedded_seq = torch.cat([w_embedded_seq, c_embedded_seq], dim=-1)  # [bs, max_seq, 400]
 
 		return embedded_seq, extended_embeddings, extended_word2id, extended_word_id_seq
