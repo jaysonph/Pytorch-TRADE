@@ -1,3 +1,14 @@
+# Testing files & backup files
+test.ipynb
+mwoz_dataset_orig.py
+config.py
+models/TRADE_orig.py
+tools/vocab_orig.py
+
+# Dataset & training-specific files
+data/multiwoz/data/
+trained_vocab/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
