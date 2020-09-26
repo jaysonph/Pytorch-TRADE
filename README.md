@@ -9,6 +9,14 @@ With trainable word embedding, words can adapt to the trained task and hence giv
 <b>1. Trainable word embeddings allow trained words to have a better representation for the trained task</b><br>
 <b>2. Non-trainable char embeddings allow unseen words(OOV) and trained words to have consistent representations(from the same distribution), in favor of the copy mechanism of pointer generator network</b>
 
+# Training
+1. Modify cfg.py if necessary
+> (e.g. which domains to train/test, use pretrained word embedding, resume from last checkpoint, etc.)<br>
+2. Start training
+```console
+>>> python train.py
+```
+
 # Future Work
 1. Implement parallel decoding to speed up the generator
 2. Implement more metrics in order to compare to the original baseline
